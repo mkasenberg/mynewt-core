@@ -1,199 +1,109 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#  http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-
-language: go
-
-_addons: &addon_conf
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - gcc-7-multilib
-      - linux-libc-dev:i386
-
-go:
-  - "1.12"
-
-git:
-  depth: false
-
-matrix:
-  include:
-    # Style checking
-    - os: linux
-      language: python
-      python:
-        - "3.5"
-      addons:
-        apt:
-          packages:
-            - "python3-pip"
-      env:
-        - TEST=STYLE
-        - DEBUG=1
-
-    # RAT Report
-    - os: linux
-      language: python
-      python:
-        - "3.5"
-      env:
-        - TEST=RAT
-        - DEBUG=1
-
-    # newt build <targets>
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=1
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=2
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=3
-    - os: linux
-      env:
-        - TEST=BUILD_TARGETS
-        - VM_AMOUNT=4
-        - TARGET_SET=4
-
-    # newt build <blinky-for-BSP>
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=1
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=2
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=3
-    - os: linux
-      env:
-        - TEST=BUILD_BLINKY
-        - VM_AMOUNT=4
-        - TARGET_SET=4
-
-    # newt test all (Linux)
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=1
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=2
-    - os: linux
-      addons: *addon_conf
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=3
-
-    # newt test all (osx)
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=1
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=2
-    - os: osx
-      osx_image: xcode9.2
-      env:
-        - TEST=TEST_ALL
-        - VM_AMOUNT=3
-        - TARGET_SET=3
-    - os: windows
-      env:
-        - TEST=BUILD_TARGETS_WINDOWS
-        - VM_AMOUNT=1
-        - TARGET_SET=1
+language: c
+dist: focal
+os: linux
 
 before_install:
-  - printenv
-  - export GOPATH=$HOME/gopath
-  - if [ "${TEST}" != "RAT" && "${TEST}" != "STYLE" ]; then go version; fi
+  - pushd ~
+  - ls -la
+  - sudo apt install curl
 
-install:
-  - git clone https://github.com/JuulLabs-OSS/mynewt-travis-ci $HOME/ci
-  - chmod +x $HOME/ci/*.sh
-  - |
-    if [ "${TEST}" == "RAT" ]; then
-      pip install requests
-    elif [ "${TEST}" == "STYLE" ]; then
-      pip3 install requests
-    else
-      $HOME/ci/${TRAVIS_OS_NAME}_travis_install.sh
-    fi
+  - curl -O https://storage.googleapis.com/golang/go1.16.linux-amd64.tar.gz
+  - tar -xvf go1.16.linux-amd64.tar.gz
+  - mv go go_folder
+  - mkdir go
+  - export GOPATH=$HOME/go
+  - export GOROOT=$HOME/go_folder
+  - export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+  - go version
 
-before_script:
-  - |
-    if [ "${TEST}" == "STYLE" ]; then
-      $HOME/ci/install_uncrustify.sh
-    elif [ "${TEST}" != "RAT" ]; then
-      newt version
-      gcc --version
-      if [ "${TEST}" != "TEST_ALL" ]; then arm-none-eabi-gcc --version; fi
-      cp -R $HOME/ci/mynewt-core-project.yml project.yml
-      mkdir -p targets
-      cp -R $HOME/ci/mynewt-core-targets targets
-      newt upgrade
-      # pass in the number of target sets
-      $HOME/ci/prepare_test.sh $VM_AMOUNT
-    fi
+  - git clone https://github.com/apache/mynewt-newt
+  - cd mynewt-newt && bash -x ./build.sh && cd ..
+  - export PATH=$HOME/mynewt-newt/newt/:$PATH
+  - newt version
 
-script:
-  # the following list of targets are known to fail building blinky, or
-  # might have extra dependencies hard to provide, non-common toolchains, etc
-  # NOTE: "native" is here to avoid having to install gcc-multilib
-  - export IGNORED_BSPS="ci40 embarc_emsk hifive1 native-armv7 native-mips
-                         pic32mx470_6lp_clicker pic32mz2048_wi-fire sensorhub
-                         native dialog_cmac"
-  - |
-    if [ "${TEST}" == "STYLE" ]; then
-      python3 $HOME/ci/check_style.py
-    elif [ "${TEST}" == "RAT" ]; then
-      python $HOME/ci/check_license.py
-    else
-      $HOME/ci/run_test.sh
-    fi
+# Why target does not compile with version from 'sudo apt-get install gcc-multilib g++-multilib gcc-arm-none-eabi libnewlib-arm-none-eabi'?
+  - cd && curl -o gcc-arm-none-eabi.tar.bz2 -L https://developer.arm.com/-/media/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2
+  - mkdir gcc-arm-none-eabi && tar -xvf gcc-arm-none-eabi.tar.bz2 -C gcc-arm-none-eabi --strip-components=1
+  - sudo ln -fs ~/gcc-arm-none-eabi/bin/arm-none-eabi* /usr/bin/
 
-cache:
-  directories:
-  - $HOME/TOOLCHAIN
-  - $HOME/Library/Caches/Homebrew
+  - popd
+  - newt new btshell_nrf52840_coverity
+  - cd btshell_nrf52840_coverity/ && newt upgrade
+
+  - pushd repos
+  # - cd apache-mynewt-core && git remote add myfork https://github.com/mkasenberg/mynewt-core.git ; git fetch myfork ; git checkout --track myfork/coverity_scan_testing ; cd ..
+  - cd apache-mynewt-core && git checkout master ; cd ..
+  - cd apache-mynewt-nimble && git checkout master ; cd ..
+  - cd apache-mynewt-mcumgr && git checkout master ; cd ..
+  - cd mcuboot && git checkout master ; cd ..
+  - popd
+  
+  - newt target create btshell_nrf52840_coverity
+  - newt clean btshell_nrf52840_coverity
+  # - newt target set btshell_nrf52840_coverity app=apps/blinky
+  - newt target set btshell_nrf52840_coverity app=@apache-mynewt-nimble/apps/btshell
+  - newt target set btshell_nrf52840_coverity bsp=@apache-mynewt-core/hw/bsp/nordic_pca10056
+  - newt target set btshell_nrf52840_coverity build_profile=debug
+  - newt target set btshell_nrf52840_coverity syscfg=LOG_LEVEL=255:BLE_ROLE_CENTRAL=1:BLE_ROLE_PERIPHERAL=1:BLE_ROLE_BROADCASTER=1:BLE_ROLE_OBSERVER=1:BLE_EDDYSTONE=1:BLE_HCI_EVT_LO_BUF_COUNT=70:BLE_EXT_ADV=1:BLE_EXT_ADV_MAX_SIZE=1650:BLE_HCI_EVT_BUF_SIZE=257:BLE_HS_DEBUG=1:BLE_L2CAP_COC_MAX_NUM=2:BLE_LL_CFG_FEAT_LE_2M_PHY=1:BLE_LL_CFG_FEAT_LE_CODED_PHY=1:BLE_LL_CFG_FEAT_LL_PRIVACY=1:BLE_LL_CONN_INIT_MAX_TX_BYTES=251:BLE_LL_DTM=1:BLE_LL_DTM_EXTENSIONS=1:BLE_LL_NUM_SCAN_DUP_ADVS=1:BLE_MAX_CONNECTIONS=5:BLE_MAX_PERIODIC_SYNCS=5:BLE_MONITOR_RTT=1:BLE_MONITOR_RTT_BUFFER_SIZE=2048:BLE_MULTI_ADV_INSTANCES=5:BLE_PERIODIC_ADV=1:BLE_PERIODIC_ADV_SYNC_TRANSFER=1:BLE_SM_BONDING=1:BLE_SM_LEGACY=1:BLE_SM_SC=1:BLE_STORE_MAX_BONDS=5:BLE_VERSION=51:CONSOLE_HISTORY=ram:CONSOLE_HISTORY_RAM_HISTORY_SIZE=10:CONSOLE_INPUT=1:CONSOLE_RTT=0:CONSOLE_UART=1:MSYS_1_BLOCK_COUNT=70:CONSOLE_STICKY_PROMPT=1:CONSOLE_PROMPT_SOFT_CURSOR=1:CONSOLE_PROMPT_SOFT_CURSOR_ATTR='"30;42m"':CONSOLE_UART_BAUD=1000000:CONSOLE_UART_RX_BUF_SIZE=256:I2C_0=1:SPI_1_MASTER=0:SPI_0_MASTER=0:DRV2605_OFB=1:LSM303DLHC_OFB=1:LSM6DSO_OFB=1:MPU6050_OFB=1:BNO055_OFB=1:TSL2561_OFB=1:TSL2591_OFB=1:TCS34725_OFB=1:BME280_OFB=0:MS5837_OFB=1:MS5840_OFB=1:BMP280_OFB=1:BMP280_OFB_I2C_NUM=0:BMA253_OFB=1:BMA2XX_OFB=1:BMP388_OFB=1:BMP388_OFB_I2C_NUM=0:ADXL345_OFB=1:ADXL345_OFB_I2C_NUM=0:LPS33HW_OFB=1:LPS33THW_OFB=1:LIS2DW12_OFB=1:LIS2DH12_OFB=1:LIS2DH12_OFB_I2C_NUM=0:LIS2DS12_OFB=1:BME680_OFB=1:KXTJ3_OFB=1:DPS368_OFB=1:ICP101XX_OFB=1:SHELL_TASK=1:STATS_NAMES=1:REBOOT_LOG_FCB=1:LOG_FCB=1:CONFIG_FCB=1:CONFIG_CLI=1:STATS_CLI=1:LOG_CLI=1:STATS_MGMT=1:LOG_MGMT=1:CONFIG_MGMT=1:TSL2561_CLI=1:BNO055_CLI=1:TCS34725_CLI=1:BME280_CLI=1:BMA2XX_CLI=1:SENSOR_OIC=1:OC_SERVER=1:OC_TRANSPORT_GATT=1:OC_APP_RESOURCES=20:FLOAT_USER=1:SENSOR_OIC_PERIODIC=1:BLE_MESH=1:BLE_MESH_PB_GATT=1:BLE_MESH_SETTINGS=1:BLE_MESH_PROXY=1:BLE_MESH_SHELL=1:BLE_MESH_GATT_PROXY=1:BLE_MESH_RELAY=1:BLE_MESH_LOW_POWER=1:BLE_MESH_FRIEND=1:BLE_MESH_CFG_CLI=1:BLE_MESH_HEALTH_CLI=1:BLE_MESH_SHELL=1:BLE_MESH_TESTING=1:BLE_MESH_SHELL_MODELS=1:BLE_MESH_CDB=1:PWM_0=1:PWM_1=1:PWM_2=1:PWM_3=1:ADC_0=1:ADC_1=1:ADC_2=1:ADC_3=1
+  - newt target show btshell_nrf52840_coverity
+
+  - 'export MYDEPS="pkg.deps:\n
+  - \"@apache-mynewt-core/hw/sensor\"\n
+  - \"@apache-mynewt-core/sys/console/full\"\n
+  - \"@apache-mynewt-core/sys/log/full\"\n
+  - \"@apache-mynewt-core/sys/log/modlog\"\n
+  - \"@apache-mynewt-core/sys/stats/full\"\n
+  - \"@apache-mynewt-core/hw/sensor/creator\"\n
+  - \"@apache-mynewt-core/sys/reboot\"\n
+  - \"@apache-mynewt-core/mgmt/smp/transport/ble\"\n
+  - \"@apache-mynewt-core/sys/id\"\n
+  - \"@apache-mynewt-core/mgmt/imgmgr\"\n
+  - \"@apache-mynewt-core/test/flash_test\"\n
+  - \"@apache-mynewt-core/test/i2c_scan\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/ans\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/bas\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/bleuart\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/dis\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/ias\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/ipss\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/lls\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/tps\"\n
+  - \"@apache-mynewt-nimble/nimble/host\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/gap\"\n
+  - \"@apache-mynewt-nimble/nimble/host/services/gatt\"\n
+  - \"@apache-mynewt-nimble/nimble/host/store/ram\"\n
+  - \"@apache-mynewt-nimble/nimble/transport\"\n
+  - \"@apache-mynewt-core/fs/fcb\"\n"'
+  - echo -en $MYDEPS >> targets/btshell_nrf52840_coverity/pkg.yml
+  
+  # Lie to linker about flash size:
+  - sed -i 's/LENGTH = 0x76000/LENGTH = 0x976000/g' repos/apache-mynewt-core/hw/bsp/nordic_pca10056/nrf52840aa.ld
+
+  - rm cov-int/ -rf
+  - echo "cd btshell_nrf52840_coverity ; newt build --executeShell btshell_nrf52840_coverity" > build_for_cov.sh
+  - chmod +x ./build_for_cov.sh
+
+script: ""
+
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    # Generated with 'travis encrypt COVERITY_SCAN_TOKEN=<coverity_project_token>'
+    # mkasenberg/mynewt-core
+    # - secure: "N7psicC6NwPfVmyQ/ZaxLhS7tAzqWH/K+56YfOM3JCHT6lvi25kKMztQr0Fyq7kw3BDcuPpMCTkY9fK29yLryaTKe3bBpEHMqbQO2W5i2XxTIpQ/t1j+/h1pTwIvwiZQoM0VUOY/wQetHMflMniTPOWeNciZrq9R0IxkxoMup9/US6JO5KsPsXdb+kYg+pq4pGO9bq9FYsYXkx295vy443kYMQZKFfM9wFA86xW5F6kWPk3QS4J5jyXKhIt6Z/j9JNeeKGLouVts5WACAWMRL/pOxx8OK0l0QHH9bbgHsqkJFrg+CAzQj0B/XFD2LoFoS52oFRQf9b5tNjj8Qu40KDxLYMn4xzHiHxEcd6dhJNYN6HwfP4UWOZuaGB83oBX8Lx9H9x5B2pnfR+gkPD/+3fWscgf7di1gQz6C84mZ9+QqsTLSd5WyzkXbui3RCdlnqcSer2ofLY8Rw5LylxNj1qpyUB0WOKF7JpO/A4JbBfjNI/Nig9cRrhrVtXV7F9Pz/uDL//t7szQgrfaH4G0hxiCOsGNLV7nfhBwHxXkFIcjdTWMQbocKutzkM2pIavxbhGEjO4gogZvbVPofxxSVsjo9d5MsH22GOz4WVRgXhEpCfk9GS6J4TFDs/mjH7I0ftjx3M+Q8pNf3vko9AQ75QN6OvsWuOHO4zfsqOPHOjQI="
+    # apache/mynewt-core
+    secure: "ZZ5x7wFT1Tn9rnhK8qCFoPkY1L01Ty0szip49GjoqEKyjLI5FqkvI0a60pVaF2TRGGKJJW2ldOI9FxM4x2QnQGzHKRVyR+4p9D92esBMtFwQylmi+KhoiibWRxZEM6mWe2qj8GRsp5BK8bxjyXFQksc68o4cWFsl8ZSKN4ysIa57OVjWOLhkj+1kJ5fqO1CURUX+KXcgsLcOX3d8sAzXUkhLBc9T9hcn8KPiE3KNSj5bkJJJEkCji4U+29nBEbCDBV8NpLpVXORemAvHYbsC/6d8yDNBAMbRNNuXO3K2JFWhOJtgTNdi/HkFf8zB72Y9qvgpbJZl6igsFvtFzDSD2gYDBGipKKJiaLiFmJqg9vHONT3ceXUXX0RXlYdvduYqAdlsus3afuJZ3ROj5SwAg/n92i1jzCbCp28ogzWeopQxGD4IK9R0JE9Zu3YgzH2w+V6gwOqFPMCPvCFxc0Vx7GbyaIVlbHrY+Bf6KGtmZpdPMcOayoUazk/ZDYzmbNntSfMhqX2T7PFJ+I8rV1fhc9USboAr538Yuo1LM0gSRXba7o42shPm9h9GSsinRocHERebVBYXqffuJc7tshLd7wgFoy48lubzcGA6u4E65LyPcVIZlRp/BTuqLyrQtLZiLu6XADRXezmoDXFjRd4ZxgiDiHEu8IdOq3jMRM/DIhU="
+
+addons:
+  coverity_scan:
+    project:
+      name: "apache/mynewt-core"
+      version: 9.9.9
+      description: "An OS to build, deploy and securely manage billions of devices"
+    notification_email: magdalena.kasenberg@codecoup.pl
+    build_command_prepend: "cov-configure --comptype gcc --compiler arm-none-eabi-gcc -- -fno-exceptions -mcpu=cortex-m4 -mthumb -mthumb-interwork"
+    build_command: "./build_for_cov.sh"
+    branch_pattern: "coverity_scan_testing"
+
+after_script:
+  - grep "\[ERROR\]" /home/travis/btshell_nrf52840_coverity/cov-int/build-log.txt | head -n 100
