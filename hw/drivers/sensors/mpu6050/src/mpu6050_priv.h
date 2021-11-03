@@ -109,7 +109,7 @@ enum mpu6050_registers {
     MPU6050_WHO_AM_I = 0x75 /* RW */
 };
 
-#define MPU6050_WHO_AM_I_VAL (0x68)
+#define MPU6050_WHO_AM_I_VAL (0x71)
 
 #define MPU6050_DATA_RDY_EN (0x01)
 #define MPU6050_DEVICE_RESET (0x80)
