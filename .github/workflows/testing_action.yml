@@ -1,0 +1,33 @@
+name: GitHub Actions Demo
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: 
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags'
+      branch_name:
+        description: 'Name of the release branch'
+jobs:
+  create_release:
+    name: Create a new Mynewt release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Print something
+      run: |
+        echo "Log level: ${{ github.event.inputs.logLevel }}"
+        echo "Tags: ${{ github.event.inputs.tags }}"
+        echo "New branch name: ${{ github.event.inputs.branch_name }}"
+    - name: Create a new branch
+      id: create_branch
+      uses: peterjgrainger/action-create-branch@v2.3.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        branch: '${{ github.event.inputs.branch_name }}'
+        sha: '${{ github.repository.head.sha }}'
+
+    
