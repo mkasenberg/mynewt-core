@@ -95,6 +95,9 @@ static struct ipc_channel ipcs[IPC_MAX_CHANS];
 
 __attribute__((section(".ipc"))) static struct ipc_shared ipc_shared[1];
 
+__attribute__((section(".ipc0_tx"))) static uint8_t ipc_tx_shared[_binary_ipc0_tx_end - _binary_ipc0_tx_start];
+__attribute__((section(".ipc0_rx"))) static uint8_t ipc_rx_shared[_binary_ipc0_rx_end - _binary_ipc0_rx_start];
+
 #if MYNEWT_VAL(MCU_APP_CORE)
 static struct ipc_shm shms[IPC_MAX_CHANS];
 static uint8_t shms_bufs[IPC_MAX_CHANS][IPC_BUF_SIZE];
