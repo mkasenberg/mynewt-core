@@ -139,6 +139,22 @@ INCLUDE "link_tables.ld.h"
         . = ALIGN(4);
     } > RAM
 
+    /* Section for IPC TX */
+    .ipc0_tx 0x20070000 (NOLOAD):
+    {
+        PROVIDE(ipc0_tx_start = .);
+        . += 0x4000;
+        PROVIDE(ipc0_tx_end = .);
+    } > RAM
+
+    /* Section for IPC RX */
+    .ipc0_rx 0x20074000 (NOLOAD):
+    {
+        PROVIDE(ipc0_rx_start = .);
+        . += 0x4000;
+        PROVIDE(ipc0_rx_end = .);
+    } > RAM
+
     /* Section for app-net cores IPC */
     .ipc 0x20000400 (NOLOAD):
     {

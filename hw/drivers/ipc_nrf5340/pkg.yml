@@ -30,5 +30,5 @@ pkg.deps:
     - "@apache-mynewt-core/kernel/os"
 
 pkg.init:
-    ipc_nrf5340_init: 'MYNEWT_VAL(IPC_NRF5340_SYSINIT_STAGE)'
-    ipc_nrf5340_netcore_init: 'MYNEWT_VAL(IPC_NRF5340_NETCORE_SYSINIT_STAGE)'
+    ipc_icbmsg_init: 'MYNEWT_VAL(IPC_NRF5340_SYSINIT_STAGE)'
+    ipc_ipc_icbmsg_netcore_init: 'MYNEWT_VAL(IPC_NRF5340_NETCORE_SYSINIT_STAGE)'
