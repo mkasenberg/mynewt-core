@@ -31,8 +31,8 @@
 #define IPC_TX_SYNC_CHANNEL 0
 #define IPC_RX_SYNC_CHANNEL 1
 #else
-#define IPC_TX_SYNC_CHANNEL 1
-#define IPC_RX_SYNC_CHANNEL 0
+#define IPC_TX_SYNC_CHANNEL 18
+#define IPC_RX_SYNC_CHANNEL 12
 #endif
 
 static void
@@ -47,30 +47,32 @@ ipc_cb(uint8_t channel)
     os_trace_isr_exit();
 }
 
-static void
-ipc_common_init(void)
-{
-    hal_ipc_init();
-    hal_ipc_register_callback(IPC_RX_SYNC_CHANNEL, ipc_cb);
-    ipc_open(IPC_SYNC_ID);
-    hal_ipc_enable_irq(IPC_RX_SYNC_CHANNEL, 1);
-    hal_ipc_start();
-}
-
 int
 ipc_signal(uint8_t channel)
 {
     return hal_ipc_signal(channel);
 }
 
+volatile static int hello = 1;
+
 void
 ipc_init(void)
 {
-    ipc_common_init();
+    hal_ipc_init();
+
+    hal_ipc_register_callback(IPC_RX_SYNC_CHANNEL, ipc_cb);
+
+    ipc_open(IPC_SYNC_ID);
+
+    hal_ipc_enable_irq(IPC_RX_SYNC_CHANNEL, 1);
+
+    hal_ipc_start();
 
     while (!ipc_ready(IPC_SYNC_ID)) {
 #if MYNEWT_VAL(MCU_APP_CORE)
         ipc_signal(IPC_TX_SYNC_CHANNEL);
 #endif
     }
+
+    while (hello);
 }

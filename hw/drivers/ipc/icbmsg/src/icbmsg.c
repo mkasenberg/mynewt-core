@@ -86,13 +86,13 @@
 #include "pbuf.h"
 
 #if MYNEWT_VAL(MCU_APP_CORE)
-__attribute__((section(".ipc0_tx"))) static uint8_t ipc0_tx_start[0x4000];
-__attribute__((section(".ipc0_rx"))) static uint8_t ipc0_rx_start[0x4000];
+__attribute__((section(".ipc0_tx"))) static uint8_t ipc0_tx_start[0x800];
+__attribute__((section(".ipc0_rx"))) static uint8_t ipc0_rx_start[0x800];
 #define TX_BLOCKS_NUM (16)
 #define RX_BLOCKS_NUM (24)
 #else
-__attribute__((section(".ipc0_tx"))) static uint8_t ipc0_rx_start[0x4000];
-__attribute__((section(".ipc0_rx"))) static uint8_t ipc0_tx_start[0x4000];
+__attribute__((section(".ipc0_tx"))) static uint8_t ipc0_rx_start[0x800];
+__attribute__((section(".ipc0_rx"))) static uint8_t ipc0_tx_start[0x800];
 #define TX_BLOCKS_NUM (24)
 #define RX_BLOCKS_NUM (16)
 #endif
