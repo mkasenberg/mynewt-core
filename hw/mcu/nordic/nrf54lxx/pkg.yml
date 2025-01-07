@@ -45,4 +45,4 @@ pkg.deps.UART_3:
     - "@apache-mynewt-core/hw/drivers/uart/uart_hal"
 
 pkg.deps.BLE_CONTROLLER:
-    - "@apache-mynewt-nimble/nimble/drivers/nrf54l15"
+    - "@apache-mynewt-nimble/nimble/drivers/nrf5x"
