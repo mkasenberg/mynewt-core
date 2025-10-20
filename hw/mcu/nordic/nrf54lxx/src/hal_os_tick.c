@@ -38,8 +38,8 @@
  */
 #define OS_TICK_CMPREG 0
 #define OS_TICK_CMPEV  NRF_GRTC_EVENT_COMPARE_0
-#define OS_IDLE_CMPREG 1
-#define OS_IDLE_CMPEV  NRF_GRTC_EVENT_COMPARE_1
+#define OS_IDLE_CMPREG 7
+#define OS_IDLE_CMPEV  NRF_GRTC_EVENT_COMPARE_7
 
 struct hal_os_tick {
     int ticks_per_ostick;
@@ -137,6 +137,9 @@ os_tick_idle(os_time_t ticks)
         /* Set ocmp for wake up */
         ocmp = g_hal_os_tick.lastocmp + (ticks * g_hal_os_tick.ticks_per_ostick);
         nrf54l_os_idle_set_ocmp(ocmp);
+        nrf_grtc_event_clear(NRF_GRTC, OS_IDLE_CMPEV);
+        nrf_grtc_sys_counter_compare_event_enable(NRF_GRTC, OS_IDLE_CMPREG);
+        nrf_grtc_int_enable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_IDLE_CMPREG));
     }
 
     __DSB();
@@ -147,8 +150,9 @@ os_tick_idle(os_time_t ticks)
          * Update OS time and re-enable OS tick interrupt before anything else
          * when coming out of the tickless regime.
          */
-        nrf_grtc_int_enable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_TICK_CMPREG));
         nrf54l_timer_handler();
+        nrf_grtc_int_disable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_IDLE_CMPREG));
+        nrf_grtc_int_enable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_TICK_CMPREG));
     }
 }
 
@@ -185,14 +189,12 @@ os_tick_init(uint32_t os_ticks_per_sec, int prio)
 
     nrf_grtc_int_disable(NRF_GRTC, 0xffffffff);
     nrf_grtc_int_enable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_TICK_CMPREG));
-    nrf_grtc_int_enable(NRF_GRTC, GRTC_COMPARE_INT_MASK(OS_IDLE_CMPREG));
 
     nrf_grtc_clksel_set(NRF_GRTC, NRF_GRTC_CLKSEL_LFXO);
 
     nrf_grtc_event_clear(NRF_GRTC, OS_TICK_CMPEV);
     nrf_grtc_event_clear(NRF_GRTC, OS_IDLE_CMPEV);
     nrf_grtc_sys_counter_compare_event_enable(NRF_GRTC, OS_TICK_CMPREG);
-    nrf_grtc_sys_counter_compare_event_enable(NRF_GRTC, OS_IDLE_CMPREG);
 
     nrf_grtc_sys_counter_interval_set(NRF_GRTC, g_hal_os_tick.ticks_per_ostick);
     nrf_grtc_sys_counter_set(NRF_GRTC, true);
