@@ -26,6 +26,7 @@
 #include <hal/hal_timer.h>
 #include <nrf.h>
 #include <mcu/nrf54l_hal.h>
+#include <mcu/nrf54l15_rtc.h>
 
 /* IRQ prototype */
 typedef void (*hal_timer_irq_handler_t)(void);
